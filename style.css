@@ -39,6 +39,7 @@ body {
 
 .maze .cell.player {
   background-color: #f00;
+  border-radius: 50%;
 }
 
 #win {
