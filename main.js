@@ -35,9 +35,9 @@ const TileType = {
 };
 
 class Cell {
-  constructor(down = TileType.WALL, right = TileType.WALL) {
-    this.down = down;
-    this.right = right;
+  constructor() {
+    this.down = TileType.WALL;
+    this.right = TileType.WALL;
   }
 }
 
@@ -48,49 +48,33 @@ class Maze {
     this.cells_ = new Array(this.height);
     for (let y = 0; y < this.height; y++) {
       this.cells_[y] = new Array(this.width);
-      for (let x = 0; x < this.width; x++) {
-        this.cells_[y][x] = new Cell();
-      }
     }
     this.randomize_();
   }
 
-  getCell_([y, x]) {
-    return this.cells_[y][x];
-  }
-
   randomize_() {
-    const discovered = new Array(this.height);
-    for (let y = 0; y < this.height; y++) {
-      discovered[y] = new Array(this.width).fill(false);
-    }
-    const markDiscovered = ([y, x]) => {
-      discovered[y][x] = true;
-    };
-    const isUndiscovered = ([y, x]) => !discovered[y][x];
-
-    // Randomized depth-first search
     const startCoords = [rand(this.height), rand(this.width)];
+    this.cells_[startCoords[0]][startCoords[1]] = new Cell();
+    // Randomized depth-first search
     const stack = [startCoords];
     while (stack.length > 0) {
       const coords = stack[stack.length - 1];
-      markDiscovered(coords);
-      const neighbors = this.getUndiscoveredNeighbors_(coords, isUndiscovered);
+      const neighbors = this.getUndiscoveredNeighbors_(coords);
       if (neighbors.length === 0) {
         stack.pop();
       } else {
+        // Open path to a random undiscovered neighbor
         const randNbr = neighbors[rand(neighbors.length)];
-        // Remove wall. Only one coordinate will have changed.
-        const deltaY = randNbr[0] - coords[0];
-        const deltaX = randNbr[1] - coords[1];
+        const randNbrCell = (this.cells_[randNbr[0]][randNbr[1]] = new Cell());
+        const [deltaY, deltaX] = [randNbr[0] - coords[0], randNbr[1] - coords[1]];
         if (deltaY === 1) {
-          this.getCell_(coords).down = TileType.OPEN;
+          this.cells_[coords[0]][coords[1]].down = TileType.OPEN;
         } else if (deltaY === -1) {
-          this.getCell_(randNbr).down = TileType.OPEN;
+          randNbrCell.down = TileType.OPEN;
         } else if (deltaX === 1) {
-          this.getCell_(coords).right = TileType.OPEN;
+          this.cells_[coords[0]][coords[1]].right = TileType.OPEN;
         } else if (deltaX === -1) {
-          this.getCell_(randNbr).right = TileType.OPEN;
+          randNbrCell.right = TileType.OPEN;
         }
         stack.push(randNbr);
       }
@@ -98,18 +82,18 @@ class Maze {
   }
 
   // Returns an array of undiscovered neighbors in random order.
-  getUndiscoveredNeighbors_([y, x], isUndiscovered) {
+  getUndiscoveredNeighbors_([y, x]) {
     let neighbors = [];
-    if (y > 0 && isUndiscovered([y - 1, x])) {
+    if (y > 0 && !this.cells_[y - 1][x]) {
       neighbors.push([y - 1, x]);
     }
-    if (y < this.height - 1 && isUndiscovered([y + 1, x])) {
+    if (y < this.height - 1 && !this.cells_[y + 1][x]) {
       neighbors.push([y + 1, x]);
     }
-    if (x > 0 && isUndiscovered([y, x - 1])) {
+    if (x > 0 && !this.cells_[y][x - 1]) {
       neighbors.push([y, x - 1]);
     }
-    if (x < this.width - 1 && isUndiscovered([y, x + 1])) {
+    if (x < this.width - 1 && !this.cells_[y][x + 1]) {
       neighbors.push([y, x + 1]);
     }
     return neighbors;
@@ -157,7 +141,6 @@ function rand(n) {
 
 function render(maze) {
   grid = maze.asGrid();
-  console.log(grid);
   gridMaxY = grid.length - 1;
   gridMaxX = grid[0].length - 1;
   // Create an exit
