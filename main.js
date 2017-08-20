@@ -26,7 +26,7 @@ const KeyCode = {
 
 const PixelSize = {
   BUTTON: 52,
-  CELL: 20,
+  CELL: 30,
 };
 
 const TileType = {
