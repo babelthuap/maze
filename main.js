@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-let grid, gridMaxY, gridMaxX, winCoords, player, keyPressed;
+let grid, gridMaxY, gridMaxX, player, keyPressed;
 
 const Direction = {
   NORTH: 0,
@@ -157,6 +157,7 @@ function rand(n) {
 
 function render(maze) {
   grid = maze.asGrid();
+  console.log(grid);
   gridMaxY = grid.length - 1;
   gridMaxX = grid[0].length - 1;
   // Create an exit
