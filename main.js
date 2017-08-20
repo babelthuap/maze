@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 
-let maze, gridMaxY, gridMaxX, player;
+let grid, gridMaxY, gridMaxX, winCoords, player, keyPressed;
 
 const Direction = {
   NORTH: 0,
@@ -156,36 +156,36 @@ function rand(n) {
 }
 
 function render(maze) {
-  // Convert maze grid to an unholy number of divs
-  const grid = maze.asGrid();
+  grid = maze.asGrid();
   gridMaxY = grid.length - 1;
   gridMaxX = grid[0].length - 1;
+  // Create an exit
+  const directionOfDeliverance = rand(4);
+  const randOddY = 2 * rand(gridMaxY / 2) + 1;
+  const randOddX = 2 * rand(gridMaxX / 2) + 1;
+  switch (directionOfDeliverance) {
+    case Direction.NORTH:
+      grid[0][randOddX] = TileType.OPEN;
+      break;
+    case Direction.SOUTH:
+      grid[gridMaxY][randOddX] = TileType.OPEN;
+      break;
+    case Direction.EAST:
+      grid[randOddY][gridMaxX] = TileType.OPEN;
+      break;
+    case Direction.DENIS:
+      grid[randOddY][0] = TileType.OPEN;
+      break;
+  }
+  // Convert the grid to an unholy number of divs
   const newMaze = createDiv('maze');
   for (let y = 0; y <= gridMaxY; y++) {
     const row = createDiv('row', `y${y}`);
     for (let x = 0; x <= gridMaxX; x++) {
-      const cell = createDiv('cell', `x${x}`, (grid[y][x] == TileType.WALL) ? 'wall' : 'open');
+      const cell = createDiv('cell', `x${x}`, (grid[y][x] === TileType.WALL) ? 'wall' : 'open');
       row.appendChild(cell);
     }
     newMaze.appendChild(row);
-  }
-  // Create an exit
-  const directionOfDeliverance = rand(4);
-  const randOddY = 2 * rand((gridMaxY) / 2) + 1;
-  const randOddX = 2 * rand((gridMaxX) / 2) + 1;
-  switch (directionOfDeliverance) {
-    case Direction.NORTH:
-      newMaze.firstChild.querySelector(`.x${randOddX}`).classList.remove('wall');
-      break;
-    case Direction.SOUTH:
-      newMaze.lastChild.querySelector(`.x${randOddX}`).classList.remove('wall');
-      break;
-    case Direction.EAST:
-      newMaze.querySelector(`.y${randOddY}`).lastChild.classList.remove('wall');
-      break;
-    case Direction.DENIS:
-      newMaze.querySelector(`.y${randOddY}`).firstChild.classList.remove('wall');
-      break;
   }
   Element.MAZE.parentNode.replaceChild(newMaze, Element.MAZE);
   Element.MAZE = newMaze;
@@ -209,12 +209,13 @@ function regenerate() {
     Element.DIMENSIONS[0].value = height;
     Element.DIMENSIONS[1].value = width;
   }
-  maze = new Maze(height, width);
+  const maze = new Maze(height, width);
   render(maze);
   initGame(); 
 }
 
 function initGame() {
+  // Initial player coords
   const y = ((gridMaxY >> 2) << 1) + 1;
   const x = ((gridMaxX >> 2) << 1) + 1;
   const cell = Element.MAZE.querySelector(`.y${y} .x${x}`);
@@ -224,39 +225,86 @@ function initGame() {
   document.addEventListener('keydown', movePlayer);
 }
 
-function movePlayer(event) {
-  let deltaY, deltaX;
-  switch (event.keyCode) {
+function movePlayer({keyCode}) {
+  // Calculate destination
+  let [y, x] = [player.y, player.x];
+  switch (keyCode) {
     case KeyCode.UP:
-      [deltaY, deltaX] = [-1, 0];
+      y--;
       break;
     case KeyCode.DOWN:
-      [deltaY, deltaX] = [1, 0];
+      y++;
       break;
     case KeyCode.LEFT:
-      [deltaY, deltaX] = [0, -1];
+      x--;
       break;
     case KeyCode.RIGHT:
-      [deltaY, deltaX] = [0, 1];
+      x++;
       break;
     default:
       return;
   }
-  let dest = [player.y + deltaY, player.x + deltaX];
-  let destCell = Element.MAZE.querySelector(`.y${dest[0]} .x${dest[1]}`);
-  if (destCell.classList.contains('wall')) {
+  // Prevent exception on win
+  if (grid[y] === undefined || grid[y][x] === undefined) {
     return;
   }
+  // Allow inexact moves
+  if (grid[y][x] === TileType.WALL) {
+    switch (keyCode) {
+      case KeyCode.UP:
+      case KeyCode.DOWN:
+        if (grid[y][x + 1] === TileType.OPEN && grid[y][x - 1] === TileType.WALL) {
+          x++;
+        } else if (grid[y][x - 1] === TileType.OPEN && grid[y][x + 1] === TileType.WALL) {
+          x--;
+        } else {
+          return;
+        }
+        break;
+      case KeyCode.LEFT:
+      case KeyCode.RIGHT:
+        if (grid[y + 1][x] === TileType.OPEN && grid[y - 1][x] === TileType.WALL) {
+          y++;
+        } else if (grid[y - 1][x] === TileType.OPEN && grid[y + 1][x] === TileType.WALL) {
+          y--;
+        } else {
+          return;
+        }
+        break;
+    }
+  }
+
+  // Move player
+  let destCell = Element.MAZE.querySelector(`.y${y} .x${x}`);
   player.cell.classList.remove('player');
   player = {
     cell: destCell,
-    y: dest[0],
-    x: dest[1],
+    y: y,
+    x: x,
   };
   player.cell.classList.add('player');
-  if (dest[0] == 0 || dest[0] == gridMaxY || dest[1] == 0 || dest[1] == gridMaxX) {
+  if (y == 0 || y == gridMaxY || x == 0 || x == gridMaxX) {
+    // Win-state
     document.removeEventListener('keydown', movePlayer);
+    keyPressed = null;
     Element.WIN.classList.remove('hidden');
+  }
+
+  // Schedule another move while the key is still being pressed
+  setTimeout(() => {
+    if (keyPressed === keyCode) {
+      movePlayer({keyCode});
+    }
+  }, 75);
+  if (!keyPressed) {
+    keyPressed = keyCode;
+    document.removeEventListener('keydown', movePlayer);
+    const endMove = () => {
+      keyPressed = null;
+      document.removeEventListener('keyup', endMove);
+      document.addEventListener('keydown', movePlayer);
+    };
+    document.addEventListener('keyup', endMove);
   }
 }
 
