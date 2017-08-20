@@ -206,10 +206,10 @@ function initGame() {
   cell.classList.add('player');
   player = {cell, y, x};
   Element.WIN.classList.add('hidden');
-  document.addEventListener('keydown', movePlayer);
+  document.addEventListener('keydown', handleKeydown);
 }
 
-function movePlayer({keyCode}) {
+function handleKeydown({keyCode}) {
   // Calculate destination
   let [y, x] = [player.y, player.x];
   switch (keyCode) {
@@ -259,40 +259,190 @@ function movePlayer({keyCode}) {
   }
 
   // Move player
-  let destCell = Element.MAZE.querySelector(`.y${y} .x${x}`);
-  player.cell.classList.remove('player');
-  player = {
-    cell: destCell,
-    y: y,
-    x: x,
-  };
-  player.cell.classList.add('player');
-  if (y == 0 || y == gridMaxY || x == 0 || x == gridMaxX) {
-    // Win-state
-    document.removeEventListener('keydown', movePlayer);
-    keyPressed = null;
-    Element.WIN.classList.remove('hidden');
-  }
+  movePlayer(y, x)
 
   // Schedule another move while the key is still being pressed
   setTimeout(() => {
     if (keyPressed === keyCode) {
-      movePlayer({keyCode});
+      handleKeydown({keyCode});
     }
   }, 75);
   if (!keyPressed) {
     keyPressed = keyCode;
-    document.removeEventListener('keydown', movePlayer);
+    document.removeEventListener('keydown', handleKeydown);
     const endMove = () => {
       keyPressed = null;
       document.removeEventListener('keyup', endMove);
-      document.addEventListener('keydown', movePlayer);
+      document.addEventListener('keydown', handleKeydown);
     };
     document.addEventListener('keyup', endMove);
   }
 }
 
+function movePlayer(y, x) {
+  let destCell = Element.MAZE.querySelector(`.y${y} .x${x}`);
+  requestAnimationFrame(() => {
+    player.cell.classList.remove('player');
+    player = {
+      cell: destCell,
+      y: y,
+      x: x,
+    };
+    player.cell.classList.add('player');
+    if (y == 0 || y == gridMaxY || x == 0 || x == gridMaxX) {
+      // Win-state
+      document.removeEventListener('keydown', handleKeydown);
+      keyPressed = null;
+      Element.WIN.classList.remove('hidden');
+    }
+  });
+}
+
+class Queue {
+  constructor() {
+    this.clear();
+  }
+  clear() {
+    this.head_ = null;
+    this.tail_ = null;
+  }
+  push(value) {
+    const newTail = {value: value, next: null};
+    if (this.tail_ != null) {
+      this.tail_.next = newTail;
+      this.tail_ = newTail;
+    } else {
+      this.head_ = this.tail_ = newTail;
+    }
+  }
+  pop() {
+    if (this.head_ != null) {
+      const value = this.head_.value;
+      if (this.head_ == this.tail_) {
+        this.clear();
+      } else {
+        this.head_ = this.head_.next;
+      }
+      return value;
+    } 
+  }
+  isEmpty() {
+    return this.tail_ == null;
+  }
+}
+
+class BFSCell {
+  constructor(y, x, prev) {
+    this.y = y;
+    this.x = x;
+    this.prev = prev;
+  }
+  toString() {
+    return `${this.y},${this.x}`;
+  }
+  toCoords() {
+    return [this.y, this.x];
+  }
+}
+
+let moveStack = [];
+setInterval(() => {
+  if (moveStack.length > 0) {
+    const [y, x] = moveStack.pop();
+    movePlayer(y, x);
+  }
+}, 50);
+document.body.addEventListener('click', ({target}) => {
+  if (!target.classList.contains('open')) {
+    return;
+  }
+  const start = new BFSCell(player.y, player.x, null);
+  const destString = 
+      target.parentNode.className.match(/y(\d+)/)[1] + ',' +
+      target.className.match(/x(\d+)/)[1];
+  // Breath-first search through the grid
+  const visitedSet = new Set();
+  const searchQueue = new Queue();
+  visitedSet.add(start.toString());
+  searchQueue.push(start);
+  let current;
+  while (!searchQueue.isEmpty()) {
+    current = searchQueue.pop();
+    // Check whether we've reached dest
+    if (current.toString() == destString) {
+      break;
+    }
+    // Add each unvisited neighbor cell to the set and the queue
+    const unvisitedNeighbors = [
+      new BFSCell(current.y + 1, current.x, current),
+      new BFSCell(current.y - 1, current.x, current),
+      new BFSCell(current.y, current.x + 1, current),
+      new BFSCell(current.y, current.x - 1, current),
+    ].filter(cell => {
+      return 0 <= cell.y && cell.y <= gridMaxY && 0 <= cell.x && cell.x <= gridMaxX &&
+          grid[cell.y][cell.x] == TileType.OPEN && !visitedSet.has(cell.toString());
+    });
+    for (const neighbor of unvisitedNeighbors) {
+      visitedSet.add(neighbor.toString());
+      searchQueue.push(neighbor);
+    }
+  }
+  // Push the shortest path onto the move stack
+  for (moveStack = []; current.toString() != start.toString(); current = current.prev) {
+    moveStack.push(current.toCoords());
+  }
+});
+
+
 Element.GENERATE_BUTTON.addEventListener('click', regenerate);
 regenerate();
 
 })();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

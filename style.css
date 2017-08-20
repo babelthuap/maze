@@ -37,6 +37,16 @@ body {
   background-color: #000;
 }
 
+.maze .cell.open {
+  cursor: pointer;
+}
+
+.maze .cell.open:not(.player):hover {
+  background-color: #f00;
+  opacity: 0.1;
+  border-radius: 50%;
+}
+
 .maze .cell.player {
   background-color: #f00;
   border-radius: 50%;
