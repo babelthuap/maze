@@ -1,0 +1,38 @@
+body {
+  margin: 0;
+  padding: 0;
+  background-color: tan;
+  text-align: center;
+}
+
+.dimension, #generate {
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.dimension {
+  width: 72px;
+}
+
+#generate {
+  margin: 14px;
+}
+
+.maze {
+  display: table;
+  margin: auto;
+}
+
+.maze .row {
+  display: table-row;
+}
+
+.maze .cell {
+  display: table-cell;
+  width: 20px;
+  height: 20px;
+}
+
+.maze .cell.wall {
+  background-color: #000;
+}
