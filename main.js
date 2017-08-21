@@ -3,7 +3,7 @@
 
 let grid, gridMaxY, gridMaxX, player, keyPressed;
 
-const MAX_SEARCH_DEPTH = 75;
+const MAX_SEARCH_DEPTH = Infinity;
 
 const Direction = {
   NORTH: 0,
