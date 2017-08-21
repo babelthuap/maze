@@ -356,93 +356,41 @@ document.body.addEventListener('click', ({target}) => {
   if (!target.classList.contains('open')) {
     return;
   }
-  const start = new BFSCell(player.y, player.x, null);
-  const destString = 
+  const dest = 
       target.parentNode.className.match(/y(\d+)/)[1] + ',' +
       target.className.match(/x(\d+)/)[1];
   // Breath-first search through the grid
   const visitedSet = new Set();
   const searchQueue = new Queue();
-  visitedSet.add(start.toString());
-  searchQueue.push(start);
+  const addIfOpenAndUnvisited = (y, x, currentCell) => {
+    if (grid[y][x] == TileType.OPEN && !visitedSet.has(`${y},${x}`)) {
+      const cell = new BFSCell(y, x, currentCell);
+      visitedSet.add(cell.toString());
+      searchQueue.push(cell);
+    }
+  };
+  addIfOpenAndUnvisited(player.y, player.x, null); // Initialize with start cell
   let current;
   while (!searchQueue.isEmpty()) {
     current = searchQueue.pop();
     // Check whether we've reached dest
-    if (current.toString() == destString) {
+    if (current.toString() == dest) {
       break;
     }
     // Add each unvisited neighbor cell to the set and the queue
-    const unvisitedNeighbors = [
-      new BFSCell(current.y + 1, current.x, current),
-      new BFSCell(current.y - 1, current.x, current),
-      new BFSCell(current.y, current.x + 1, current),
-      new BFSCell(current.y, current.x - 1, current),
-    ].filter(cell => {
-      return 0 <= cell.y && cell.y <= gridMaxY && 0 <= cell.x && cell.x <= gridMaxX &&
-          grid[cell.y][cell.x] == TileType.OPEN && !visitedSet.has(cell.toString());
-    });
-    for (const neighbor of unvisitedNeighbors) {
-      visitedSet.add(neighbor.toString());
-      searchQueue.push(neighbor);
-    }
+    const {y, x} = current;
+    if (y < gridMaxY) addIfOpenAndUnvisited(y + 1, x, current);
+    if (y > 0) addIfOpenAndUnvisited(y - 1, x, current);
+    if (x < gridMaxX) addIfOpenAndUnvisited(y, x + 1, current);
+    if (x > 0) addIfOpenAndUnvisited(y, x - 1, current);
   }
   // Push the shortest path onto the move stack
-  for (moveStack = []; current.toString() != start.toString(); current = current.prev) {
+  for (moveStack = []; current.prev != null; current = current.prev) {
     moveStack.push(current.toCoords());
   }
 });
-
 
 Element.GENERATE_BUTTON.addEventListener('click', regenerate);
 regenerate();
 
 })();
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
