@@ -3,6 +3,8 @@
 
 let grid, gridMaxY, gridMaxX, player, keyPressed;
 
+const MAX_SEARCH_DEPTH = 75;
+
 const Direction = {
   NORTH: 0,
   SOUTH: 1,
@@ -371,7 +373,7 @@ document.body.addEventListener('click', ({target}) => {
   };
   addIfOpenAndUnvisited(player.y, player.x, null); // Initialize with start cell
   let current;
-  while (!searchQueue.isEmpty()) {
+  while (!searchQueue.isEmpty() && visitedSet.size < MAX_SEARCH_DEPTH) {
     current = searchQueue.pop();
     // Check whether we've reached dest
     if (current.toString() == dest) {
@@ -385,8 +387,10 @@ document.body.addEventListener('click', ({target}) => {
     if (x > 0) addIfOpenAndUnvisited(y, x - 1, current);
   }
   // Push the shortest path onto the move stack
-  for (moveStack = []; current.prev != null; current = current.prev) {
-    moveStack.push(current.toCoords());
+  if (visitedSet.size < MAX_SEARCH_DEPTH) {
+    for (moveStack = []; current.prev != null; current = current.prev) {
+      moveStack.push(current.toCoords());
+    }
   }
 });
 
